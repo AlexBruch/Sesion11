@@ -1,5 +1,7 @@
 package com.s11.lasalle.sesion11;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +11,7 @@ import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -52,10 +55,10 @@ public class MainActivity extends AppCompatActivity {
                 //Picasso.with(getApplicationContext()).load(link.getText().toString()).into(image);
 
                 /** Descargar imagen "manualmente" by FELIPE **/
-                //new DownloadImageTask().execute(link.getText().toString());
+                new DownloadImageTask().execute(link.getText().toString());
 
-                /** Descargar imagen y guardarla en el móvil **/
-                new DownloadImage().execute(link.getText().toString());
+                /** Descargar imagen y guardarla en el teléfono **/
+                //new DownloadImage().execute(link.getText().toString());
             }
         });
 
@@ -63,15 +66,40 @@ public class MainActivity extends AppCompatActivity {
 
                         /***** BY FELIPE *****/
 
-    /**private class DownloadImageTask extends AsyncTask<String, Integer, Bitmap> {
+    private class DownloadImageTask extends AsyncTask<String, Integer, Bitmap> {
         @Override
         protected Bitmap doInBackground(String... urls) {
             return downloadImage(urls[0]);
         }
 
         @Override
-        protected void onPostExecute(Bitmap bitmap) {
+        protected void onPostExecute(Bitmap bitmap) { // Main Thread
             image.setImageBitmap(bitmap);
+
+            //Mostrar la imagen en notificación
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext());
+            builder.setSmallIcon(android.R.drawable.ic_menu_gallery);
+            builder.setLargeIcon(bitmap);
+
+            //Per agafar el nom de la imatge(de la URL)
+
+            String[] splitLink = link.getText().toString().split("/");
+            String imageName = splitLink[splitLink.length-1];
+            builder.setContentTitle(imageName);
+            //builder.setContentText("Contingut imatge");
+
+            NotificationCompat.BigPictureStyle bigPictureStyle = new NotificationCompat.BigPictureStyle();
+            bigPictureStyle.bigPicture(bitmap);
+            builder.setStyle(bigPictureStyle);
+
+            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, 0);
+
+            //Codigo para compartir la imagen
+
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            notificationManager.notify(0, builder.build());
         }
 
         private Bitmap downloadImage(String link) {
@@ -97,11 +125,11 @@ public class MainActivity extends AppCompatActivity {
             }
             return bitmap;
         }
-    }**/
+    }
 
              /***** DESCARGAR IMAGEN EN DISPOSITIVO *****/
 
-    public void saveImage(Context context, Bitmap bitmap, String imageName) {
+    /**public void saveImage(Context context, Bitmap bitmap, String imageName) {
         FileOutputStream fileOutputStream;
         try {
             fileOutputStream = context.openFileOutput(imageName, Context.MODE_PRIVATE);
@@ -158,5 +186,5 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return bitmap;
-    }
+    }**/
 }
