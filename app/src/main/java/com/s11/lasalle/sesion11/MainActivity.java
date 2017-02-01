@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 
-                /** Descargar imagen con Picasso (añadir librería en el gradle y sincronizar!!) **/
+                /** Descargar imagen con Picasso (¡¡Añadir librería en el gradle y sincronizar!!) **/
                 //Picasso.with(getApplicationContext()).load(link.getText().toString()).into(image);
 
                 /** Descargar imagen "manualmente" by FELIPE **/
@@ -95,8 +95,15 @@ public class MainActivity extends AppCompatActivity {
 
             Intent intent = new Intent(getApplicationContext(), MainActivity.class);
             PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, 0);
+            builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingIntent);
+            builder.setContentIntent(pendingIntent);
 
             //Codigo para compartir la imagen
+
+            intent.setAction(Intent.ACTION_SEND);
+            intent.putExtra(Intent.EXTRA_TEXT, "I wanna kill u dude");
+            intent.setType("image/*");
+            startActivity(intent);
 
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             notificationManager.notify(0, builder.build());
