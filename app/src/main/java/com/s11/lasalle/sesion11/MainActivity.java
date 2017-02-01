@@ -55,17 +55,17 @@ public class MainActivity extends AppCompatActivity {
                 //Picasso.with(getApplicationContext()).load(link.getText().toString()).into(image);
 
                 /** Descargar imagen "manualmente" by FELIPE **/
-                new DownloadImageTask().execute(link.getText().toString());
+                //new DownloadImageTask().execute(link.getText().toString());
 
                 /** Descargar imagen y guardarla en el teléfono **/
-                //new DownloadImage().execute(link.getText().toString());
+                new DownloadImage().execute(link.getText().toString());
             }
         });
 
     }
 
                         /***** BY FELIPE *****/
-
+/**
     private class DownloadImageTask extends AsyncTask<String, Integer, Bitmap> {
         @Override
         protected Bitmap doInBackground(String... urls) {
@@ -98,13 +98,6 @@ public class MainActivity extends AppCompatActivity {
             builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingIntent);
             builder.setContentIntent(pendingIntent);
 
-            //Codigo para compartir la imagen
-
-            intent.setAction(Intent.ACTION_SEND);
-            intent.putExtra(Intent.EXTRA_TEXT, "I wanna kill u dude");
-            intent.setType("image/*");
-            startActivity(intent);
-
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             notificationManager.notify(0, builder.build());
         }
@@ -132,11 +125,11 @@ public class MainActivity extends AppCompatActivity {
             }
             return bitmap;
         }
-    }
+    }**/
 
              /***** DESCARGAR IMAGEN EN DISPOSITIVO *****/
 
-    /**public void saveImage(Context context, Bitmap bitmap, String imageName) {
+    public void saveImage(Context context, Bitmap bitmap, String imageName) {
         FileOutputStream fileOutputStream;
         try {
             fileOutputStream = context.openFileOutput(imageName, Context.MODE_PRIVATE);
@@ -178,6 +171,38 @@ public class MainActivity extends AppCompatActivity {
             Log.d("Guardado en", imageFullPath.toString());
             if (file.exists()) Log.d("La imagen", "imagesesion11.jpeg ya existe!");
             image.setImageBitmap(bitmap);
+
+            //Mostrar la imagen en notificación
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext());
+            builder.setSmallIcon(android.R.drawable.ic_menu_gallery);
+            builder.setLargeIcon(bitmap);
+
+            //Per agafar el nom de la imatge(de la URL)
+
+            String[] splitLink = link.getText().toString().split("/");
+            String imageName = splitLink[splitLink.length-1];
+            builder.setContentTitle(imageName);
+            //builder.setContentText("Contingut imatge");
+
+            NotificationCompat.BigPictureStyle bigPictureStyle = new NotificationCompat.BigPictureStyle();
+            bigPictureStyle.bigPicture(bitmap);
+            builder.setStyle(bigPictureStyle);
+
+            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, 0);
+            builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingIntent);
+            builder.setContentIntent(pendingIntent);
+
+            //Codigo para compartir la imagen
+
+            intent.setAction(Intent.ACTION_SEND);
+            intent.putExtra(Intent.EXTRA_STREAM, imageFullPath.toString());
+            intent.setType("image/*");
+            startActivity(intent);
+
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            notificationManager.notify(0, builder.build());
         }
     }
 
@@ -193,5 +218,5 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return bitmap;
-    }**/
+    }
 }
