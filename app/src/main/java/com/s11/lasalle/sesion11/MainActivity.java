@@ -2,10 +2,8 @@ package com.s11.lasalle.sesion11;
 
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -19,16 +17,12 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.Toast;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-
-import static android.R.attr.bitmap;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -48,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
         download.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
                 /** Descargar imagen con Picasso (¡¡Añadir librería en el gradle y sincronizar!!) **/
                 //Picasso.with(getApplicationContext()).load(link.getText().toString()).into(image);
 
@@ -94,7 +89,9 @@ public class MainActivity extends AppCompatActivity {
         return bitmap;
     }
 
-    public void createNotificationActivity(Bitmap bitmap) {
+    private void createNotificationActivity(Bitmap bitmap) {
+
+        /** Per agafar nom original de la imatge **/
 
         String[] splitLink = link.getText().toString().split("/");
         String imageName = splitLink[splitLink.length-1];
@@ -114,8 +111,8 @@ public class MainActivity extends AppCompatActivity {
         bigPictureStyle.bigPicture(bitmap);
         builder.setStyle(bigPictureStyle);
 
-        /** COMPARTIR IMATGE EN CACHÉ **/
-        File file = new File(getApplicationContext().getCacheDir(), imageName);
+        /** COMPARTIR IMATGE  **/
+        File file = new File(Environment.DIRECTORY_PICTURES, imageName);
         try {
 
             FileOutputStream fileOutputStream = new FileOutputStream(file);
