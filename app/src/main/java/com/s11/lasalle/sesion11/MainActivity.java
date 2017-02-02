@@ -8,7 +8,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Environment;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.app.NotificationCompat;
@@ -26,11 +29,17 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectStreamField;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 
 import static android.R.attr.bitmap;
+import static android.R.attr.data;
 import static android.R.attr.format;
+import static android.R.string.no;
+import static android.os.Build.VERSION_CODES.M;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -59,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
 
                 /** Descargar imagen y guardarla en el teléfono **/
                 new DownloadImage().execute(link.getText().toString());
+                //sharemessageText();
             }
         });
 
@@ -131,26 +141,58 @@ public class MainActivity extends AppCompatActivity {
 
     public void saveImage(Context context, Bitmap bitmap, String imageName) {
         FileOutputStream fileOutputStream;
+
+        String filename = "myfile";
+        String string = "Hello world!";
+        FileOutputStream outputStream;
+
         try {
-            fileOutputStream = context.openFileOutput(imageName, Context.MODE_PRIVATE);
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
-            fileOutputStream.close();
-        }catch (Exception e) {
-            Log.d("saveImage", "Exception, algo va mal ):");
+            //File f = new File(context.getFilesDir(),imageName);
+            File f = new File(context.getCacheDir(),imageName);
+
+            FileOutputStream stream = new FileOutputStream(f);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+            //stream.write("text-to-write".getBytes());
+            stream.close();
+
+            if ( f.exists() ) {
+                Log.d("exists",f.getAbsolutePath());
+            } else {
+                Log.e("no existe",f.getAbsolutePath());
+            }
+
+//            outputStream = openFileOutput(filename, Context.MODE_PRIVATE);
+//
+//            outputStream.write(string.getBytes());
+//            outputStream.close();
+        } catch (Exception e) {
             e.printStackTrace();
         }
+
+
+//        try {
+//            //File file = File.createTempFile(imageName, null, context.getCacheDir());
+//            File file = File.createTempFile(imageName, null, context.getFilesDir());
+//            fileOutputStream = context.openFileOutput(imageName, Context.MODE_PRIVATE);
+//            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
+//            fileOutputStream.close();
+//        }catch (Exception e) {
+//            Log.d("saveImage", "Exception, algo va mal ):");
+//            e.printStackTrace();
+//        }
     }
 
     private  class DownloadImage extends AsyncTask<String, Void, Bitmap> {
-
+        InputStream b;
         private Bitmap downloadImageBitmap(String urls){
             Bitmap bitmap = null;
             try {
+                b = new URL(urls).openStream();
                 // Descargar imagen de URL
-                InputStream inputStream = new URL(urls).openStream();
+                //InputStream inputStream = new URL(urls).openStream();
                 // Pasamos la info inputStream a Bitmap
-                bitmap = BitmapFactory.decodeStream(inputStream);
-                inputStream.close();
+                bitmap = BitmapFactory.decodeStream(b);
+                b.close();
             } catch (Exception e) {
                 Log.d("DownloadImage", "Exception, algo va mal );");
                 e.printStackTrace();
@@ -164,12 +206,16 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Bitmap bitmap) {
-            saveImage(getApplicationContext(), bitmap, "imagesesion11.jpeg");
-            loadImageBitmap(getApplicationContext(), "imagesesion11.jpeg");
-            File file = getApplicationContext().getFileStreamPath("imagesesion11.jpeg");
-            String imageFullPath = file.getAbsolutePath();
-            Log.d("Guardado en", imageFullPath.toString());
-            if (file.exists()) Log.d("La imagen", "imagesesion11.jpeg ya existe!");
+
+            String[] splitLink = link.getText().toString().split("/");
+            String imageName = splitLink[splitLink.length-1];
+
+            saveImage(getApplicationContext(), bitmap, imageName);
+//            loadImageBitmap(getApplicationContext(), "imagesesion11.jpeg");
+//            File file = getApplicationContext().getFileStreamPath("imagesesion11.jpeg");
+//            String imageFullPath = file.getAbsolutePath();
+//            Log.d("Guardado en", imageFullPath.toString());
+//            if (file.exists()) Log.d("La imagen", "imagesesion11.jpeg ya se ha creado!");
             image.setImageBitmap(bitmap);
 
             //Mostrar la imagen en notificación
@@ -178,10 +224,14 @@ public class MainActivity extends AppCompatActivity {
             builder.setSmallIcon(android.R.drawable.ic_menu_gallery);
             builder.setLargeIcon(bitmap);
 
+            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, 0);
+            builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingIntent);
+            builder.setContentIntent(pendingIntent);
+
             //Per agafar el nom de la imatge(de la URL)
 
-            String[] splitLink = link.getText().toString().split("/");
-            String imageName = splitLink[splitLink.length-1];
+
             builder.setContentTitle(imageName);
             //builder.setContentText("Contingut imatge");
 
@@ -189,18 +239,79 @@ public class MainActivity extends AppCompatActivity {
             bigPictureStyle.bigPicture(bitmap);
             builder.setStyle(bigPictureStyle);
 
-            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-            PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, 0);
-            builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingIntent);
-            builder.setContentIntent(pendingIntent);
+
 
             //Codigo para compartir la imagen
+/*
+            Intent sendIntent = new Intent();
+            sendIntent.setAction(Intent.ACTION_SEND);
+            sendIntent.putExtra(Intent.EXTRA_TEXT, "Text compartit WEAAAA");
+            sendIntent.setType("text/plain");
+            startActivity(sendIntent);
+*/
+/*
+            final Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("image/jpg");
+            final File photoFile = new File(getFilesDir(), "foo.jpg");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(photoFile));
+            startActivity(Intent.createChooser(shareIntent, "Share image using"));
+*/
+//            File f = getApplicationContext().getFileStreamPath("imagesesion11.jpeg");
+            //File f = new File(getApplicationContext().getFilesDir(),imageName);
+            //File f = new File(Environment.getExternalStorageDirectory(),imageName);
+            File f = new File(getApplicationContext().getCacheDir(),imageName);
+            //FileOutputStream stream = new FileOutputStream(f);
+            //File f = new File("/DCIM/Camera/","20130919_125831.jpg");
+            if ( f.exists() ) {
+                Log.d("exists",f.getAbsolutePath());
+            } else {
+                Log.e("no existe",f.getAbsolutePath());
+            }
+            //File f = new File(getApplicationContext().getFilesDir(), "20130919_125831.jpg");
 
-            intent.setAction(Intent.ACTION_SEND);
-            intent.putExtra(Intent.EXTRA_STREAM, imageFullPath.toString());
-            intent.setType("image/*");
-            startActivity(intent);
+            //File f = new File("imagesCam/20130919_125831.jpg");
+            //Uri uri = Uri.parse("file://"+f.getAbsolutePath());
 
+
+            // getExternalFilesDir() + "/Pictures" should match the declaration in fileprovider.xml paths
+            //File filee = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "share_image_" + System.currentTimeMillis() + ".png");
+
+// wrap File object into a content provider
+            //Uri uri = FileProvider.getUriForFile(getApplicationContext(), "comm.codepath.myFileprovider", f);
+            Uri uri = FileProvider.getUriForFile(MainActivity.this,
+                    BuildConfig.APPLICATION_ID + ".provider",
+                    f);
+
+
+
+            Intent share = new Intent(Intent.ACTION_SEND);
+            share.setType("image/jpeg");
+            //share.setType("text/plain");
+            //share.putExtra(Intent.EXTRA_TEXT, uri.toString());
+            share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            //share.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(f));
+            share.putExtra(Intent.EXTRA_STREAM, uri);
+
+            startActivity(Intent.createChooser(share, "Share image File"));
+
+/*
+            //FileOutputStream fileOutputStream;
+            //Context ctx = getApplicationContext();
+            //fileOutputStream = ctx.openFileOutput("test", Context.MODE_PRIVATE);
+            //bitmap.compress(Bitmap.CompressFormat.JPEG, 100, b);
+            Intent sendIntent = new Intent();
+            sendIntent.setAction(Intent.ACTION_SEND);
+            //sendIntent.putExtra(Intent.EXTRA_STREAM, sendIntent);
+
+
+            //sendIntent.putExtra(Intent.EXTRA_TEXT, imageFullPath);
+            //sendIntent.putExtra(Intent.EXTRA_STREAM, imageFullPath);
+            sendIntent.putExtra(Intent.EXTRA_STREAM, "/DCIM/Camera/20130919_125831.jpg");
+            sendIntent.setType("image/jpeg");
+            //sendIntent.setType("text/plain");
+            startActivity(sendIntent);
+            //startActivity(Intent.createChooser(sendIntent, "compartir"));
+*/
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             notificationManager.notify(0, builder.build());
         }
@@ -218,5 +329,15 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return bitmap;
+    }
+
+    public void sharemessageText() {
+
+
+        Intent sendIntent = new Intent();
+        sendIntent.setAction(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, "Text compartit WEAAAA");
+        sendIntent.setType("text/plain");
+        startActivity(sendIntent);
     }
 }
