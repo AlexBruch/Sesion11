@@ -2,13 +2,16 @@ package com.s11.lasalle.sesion11;
 
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.NotificationCompat;
 import android.util.Log;
@@ -16,12 +19,16 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+
+import static android.R.attr.bitmap;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -59,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Bitmap bitmap) { // Main Thread
             image.setImageBitmap(bitmap);
-            CreateNotificationActivity(bitmap);
+            createNotificationActivity(bitmap);
         }
     }
 
@@ -74,65 +81,62 @@ public class MainActivity extends AppCompatActivity {
             httpURLConnection.setDoInput(true);
             httpURLConnection.connect();
 
-            //Rebem la informació en format InputStrem
+            //Rebem la informació com a InputStrem
             InputStream inputStream = httpURLConnection.getInputStream();
 
             //Transformem la informació a BitMap
             bitmap = BitmapFactory.decodeStream(inputStream);
 
         } catch (Exception e) {
-            Log.d("downloadImage", "Exception, algo va mal D:");
+            Log.e("downloadImage", "Exception, algo va mal D:");
             e.printStackTrace();
         }
         return bitmap;
     }
 
-    public void CreateNotificationActivity(Bitmap bitmap) {
+    public void createNotificationActivity(Bitmap bitmap) {
 
         String[] splitLink = link.getText().toString().split("/");
         String imageName = splitLink[splitLink.length-1];
 
-        /** Mostrar la imagen en notificación **/
+        /** Constructor per a la notificació **/
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext());
+
+        /** Icone per mostrar a la notificació **/
+
         builder.setSmallIcon(android.R.drawable.ic_menu_gallery);
         builder.setLargeIcon(bitmap);
 
-        /** BOTÓ NOTIFICACIÓ **/
-
-        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, intent, 0);
-        builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingIntent);
-        builder.setContentIntent(pendingIntent);
-        builder.setContentTitle(imageName);
+        /** Mostrar la imatge a la notificació **/
 
         NotificationCompat.BigPictureStyle bigPictureStyle = new NotificationCompat.BigPictureStyle();
         bigPictureStyle.bigPicture(bitmap);
         builder.setStyle(bigPictureStyle);
 
-        shareImage(bitmap, imageName);
-
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(0, builder.build());
-    }
-/**   http://stackoverflow.com/questions/21925688/adding-button-action-in-custom-notification **/
-            /** CÓDIGO COMPARTIR IMAGEN **/
-
-    private void shareImage (Bitmap bitmap, String imageName) {
+        /** COMPARTIR IMATGE EN CACHÉ **/
+        File file = new File(getApplicationContext().getCacheDir(), imageName);
         try {
-            File file = new File(getApplicationContext().getCacheDir(), imageName);
+
             FileOutputStream fileOutputStream = new FileOutputStream(file);
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream);
             fileOutputStream.flush(); // Optimizació: per borrar fluxe de bytes de sortida i obligar als que estan en memoria a escriures
             fileOutputStream.close();
             file.setReadable(true, false); // Per permetre acces de lectura a totes les aplicacions
-            final Intent shareIntent = new Intent(android.content.Intent.ACTION_SEND);
-            shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
-            shareIntent.setType("image/png");
-            startActivity(shareIntent);
+
         } catch (Exception e) {
-            Log.e("compartir imatge", "No rutlla");
+            Log.e("shareImageCache", "No rutlla");
         }
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
+        shareIntent.setType("image/*");
+        PendingIntent pendingIntent = PendingIntent.getActivity(MainActivity.this, 1, shareIntent, 0);
+        builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingIntent);
+        builder.setContentIntent(pendingIntent);
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(0, builder.build());
     }
 }
+
