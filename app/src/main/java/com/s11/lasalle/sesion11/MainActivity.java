@@ -59,33 +59,32 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Bitmap bitmap) { // Main Thread
             image.setImageBitmap(bitmap);
-
             CreateNotificationActivity(bitmap);
         }
+    }
 
-        private Bitmap downloadImage(String link) {
-            Bitmap bitmap = null;
-            try {
-                //Definició URL
-                URL url = new URL(link);
+    private Bitmap downloadImage(String link) {
+        Bitmap bitmap = null;
+        try {
+            //Definició URL
+            URL url = new URL(link);
 
-                //Configuració HttpURLConnection per fer la descàrrega
-                HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-                httpURLConnection.setDoInput(true);
-                httpURLConnection.connect();
+            //Configuració HttpURLConnection per fer la descàrrega
+            HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+            httpURLConnection.setDoInput(true);
+            httpURLConnection.connect();
 
-                //Rebem la informació en format InputStrem
-                InputStream inputStream = httpURLConnection.getInputStream();
+            //Rebem la informació en format InputStrem
+            InputStream inputStream = httpURLConnection.getInputStream();
 
-                //Transformem la informació a BitMap
-                bitmap = BitmapFactory.decodeStream(inputStream);
+            //Transformem la informació a BitMap
+            bitmap = BitmapFactory.decodeStream(inputStream);
 
-            } catch (Exception e) {
-                Log.d("downloadImage", "Exception, algo va mal D:");
-                e.printStackTrace();
-            }
-            return bitmap;
+        } catch (Exception e) {
+            Log.d("downloadImage", "Exception, algo va mal D:");
+            e.printStackTrace();
         }
+        return bitmap;
     }
 
     public void CreateNotificationActivity(Bitmap bitmap) {
@@ -116,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(0, builder.build());
     }
-
+/**   http://stackoverflow.com/questions/21925688/adding-button-action-in-custom-notification **/
             /** CÓDIGO COMPARTIR IMAGEN **/
 
     private void shareImage (Bitmap bitmap, String imageName) {
@@ -128,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
             fileOutputStream.close();
             file.setReadable(true, false); // Per permetre acces de lectura a totes les aplicacions
             final Intent shareIntent = new Intent(android.content.Intent.ACTION_SEND);
-            //shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
             shareIntent.setType("image/png");
             startActivity(shareIntent);
