@@ -33,11 +33,13 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class MainActivity extends AppCompatActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
+import static android.R.attr.bitmap;
 
-    EditText link;
-    Button download;
-    ImageView image;
+public class MainActivity extends AppCompatActivity{
+
+    private EditText link;
+    private Button download;
+    private ImageView image;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,14 +70,14 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         }
 
         @Override
-        protected void onPostExecute(Bitmap bitmap) { // Main Thread
-            image.setImageBitmap(bitmap);
-            createNotificationActivity(bitmap);
+        protected void onPostExecute(Bitmap downloadedbitmap2) { // Main Thread
+            image.setImageBitmap(downloadedbitmap2);
+            createNotificationActivity(downloadedbitmap2);
         }
     }
 
     private Bitmap downloadImage(String link) {
-        Bitmap bitmap = null;
+        Bitmap downloadedbitmap = null;
         try {
             //Definició URL
             URL url = new URL(link);
@@ -89,13 +91,13 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
             InputStream inputStream = httpURLConnection.getInputStream();
 
             //Transformem la informació a BitMap
-            bitmap = BitmapFactory.decodeStream(inputStream);
+            downloadedbitmap = BitmapFactory.decodeStream(inputStream);
 
         } catch (Exception e) {
             Log.e("downloadImage", "Exception, algo va mal D:");
             e.printStackTrace();
         }
-        return bitmap;
+        return downloadedbitmap;
     }
 
     private void createNotificationActivity(Bitmap bitmap) {
@@ -107,60 +109,70 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
 
         /** Constructor per a la notificació **/
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext());
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this);
 
         /** Icona+text per mostrar a la notificació **/
 
-        builder.setSmallIcon(android.R.drawable.ic_menu_gallery);
+        builder.setSmallIcon(android.R.drawable.ic_menu_gallery).setLargeIcon(bitmap);
         builder.setContentTitle(imageName);
         builder.setLargeIcon(bitmap);
+        builder.setContentText("Text text text");
 
         /** Mostrar la imatge a la notificació **/
 
         NotificationCompat.BigPictureStyle bigPictureStyle = new NotificationCompat.BigPictureStyle();
         bigPictureStyle.bigPicture(bitmap);
         bigPictureStyle.setBigContentTitle(imageName);
+        bigPictureStyle.setBigContentTitle("Text style");
         builder.setStyle(bigPictureStyle);
 
         Intent Intent = new Intent(MainActivity.this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(MainActivity.this, 0, Intent, 0);
 
-        /** COMPARTIR IMATGE **/
-        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), imageName);
+        /** GUARDAR IMATGE **/
 
+        Bitmap saveImage = bitmap;
+
+        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), imageName);
+        //File file = new File(getApplicationContext().getCacheDir()), imageName);
+
+        //Comprovem la versió d'Android
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                // Demanem permís a l'usuari
                 requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
             }else {
+                // Si ja està donat
                 try {
                     FileOutputStream fileOutputStream = new FileOutputStream(file);
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream);
+                    saveImage.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream);
                     fileOutputStream.flush(); // Optimizació: per borrar fluxe de bytes de sortida i obligar als que estan en memoria a escriures
                     fileOutputStream.close();
                     file.setReadable(true, false); // Per permetre acces de lectura a totes les aplicacions
                     if (!file.mkdirs()) Log.e("Crear carpeta", "No rutlla");
 
-                } catch (Exception e) {Log.e("Compartir imatge", "No rutlla");}
+                } catch (Exception e) {Log.e("Guardar imatge", "No rutlla"); e.printStackTrace();}
             }
         }else {
             try {
                 FileOutputStream fileOutputStream = new FileOutputStream(file);
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream);
+                saveImage.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream);
                 fileOutputStream.flush(); // Optimizació: per borrar fluxe de bytes de sortida i obligar als que estan en memoria a escriures
                 fileOutputStream.close();
                 file.setReadable(true, false); // Per permetre acces de lectura a totes les aplicacions
-                if (!file.mkdirs()) Log.e("Crear carpeta", "No rutlla");
+                if (!file.mkdirs()) Log.e("Crear carpeta 2", "No rutlla");
 
-            } catch (Exception e) {Log.e("Compartir imatge", "No rutlla");}
+            } catch (Exception e) {Log.e("Guardar imatge 2", "No rutlla");}
         }
 
+        /** ENVIAR IMATGE **/
 
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         shareIntent.putExtra(Intent.EXTRA_TEXT, "Imatge descarregada de " + link.getText().toString());
         shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
-        shareIntent.setType("image/*");
-        PendingIntent pendingShareIntent = PendingIntent.getActivity(MainActivity.this, 1, shareIntent, 0);
+        shareIntent.setType("image/png");
+        PendingIntent pendingShareIntent = PendingIntent.getActivity(MainActivity.this, 1, shareIntent, 1);
         builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingShareIntent);
         builder.setContentIntent(pendingIntent);
         //startActivity(shareIntent);
