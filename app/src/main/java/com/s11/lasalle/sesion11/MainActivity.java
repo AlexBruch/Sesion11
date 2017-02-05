@@ -12,6 +12,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
@@ -32,7 +33,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
 
     EditText link;
     Button download;
@@ -42,20 +43,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-
-            } else {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},21
-                );
-            }
-        }
 
         link = (EditText) findViewById(R.id.urlIMG);
         download = (Button) findViewById(R.id.downloadimg);
@@ -122,42 +109,65 @@ public class MainActivity extends AppCompatActivity {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext());
 
-        /** Icone per mostrar a la notificació **/
+        /** Icona+text per mostrar a la notificació **/
 
         builder.setSmallIcon(android.R.drawable.ic_menu_gallery);
+        builder.setContentTitle(imageName);
         builder.setLargeIcon(bitmap);
 
         /** Mostrar la imatge a la notificació **/
 
         NotificationCompat.BigPictureStyle bigPictureStyle = new NotificationCompat.BigPictureStyle();
         bigPictureStyle.bigPicture(bitmap);
+        bigPictureStyle.setBigContentTitle(imageName);
         builder.setStyle(bigPictureStyle);
 
-        /** COMPARTIR IMATGE EN CACHÉ **/
-        File file = new File(getApplicationContext().getCacheDir(), imageName);
-        try {
-            FileOutputStream fileOutputStream = new FileOutputStream(file);
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
-            fileOutputStream.flush(); // Optimizació: per borrar fluxe de bytes de sortida i obligar als que estan en memoria a escriures
-            fileOutputStream.close();
-            file.setReadable(true, false); // Per permetre acces de lectura a totes les aplicacions
+        Intent Intent = new Intent(MainActivity.this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(MainActivity.this, 0, Intent, 0);
 
-        } catch (Exception e) {
-            Log.e("shareImageCache", "No rutlla");
+        /** COMPARTIR IMATGE **/
+        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), imageName);
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+            }else {
+                try {
+                    FileOutputStream fileOutputStream = new FileOutputStream(file);
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream);
+                    fileOutputStream.flush(); // Optimizació: per borrar fluxe de bytes de sortida i obligar als que estan en memoria a escriures
+                    fileOutputStream.close();
+                    file.setReadable(true, false); // Per permetre acces de lectura a totes les aplicacions
+                    if (!file.mkdirs()) Log.e("Crear carpeta", "No rutlla");
+
+                } catch (Exception e) {Log.e("Compartir imatge", "No rutlla");}
+            }
+        }else {
+            try {
+                FileOutputStream fileOutputStream = new FileOutputStream(file);
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream);
+                fileOutputStream.flush(); // Optimizació: per borrar fluxe de bytes de sortida i obligar als que estan en memoria a escriures
+                fileOutputStream.close();
+                file.setReadable(true, false); // Per permetre acces de lectura a totes les aplicacions
+                if (!file.mkdirs()) Log.e("Crear carpeta", "No rutlla");
+
+            } catch (Exception e) {Log.e("Compartir imatge", "No rutlla");}
         }
+
 
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        shareIntent.putExtra(Intent.EXTRA_TEXT, "Imatge descarregada de " + link.getText().toString());
         shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
-        shareIntent.setType("image/jpeg");
-        startActivity(shareIntent);
-        //PendingIntent pendingIntent = PendingIntent.getActivity(MainActivity.this, 1, shareIntent, 0);
-        //builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingIntent);
-        //builder.setContentIntent(pendingIntent);
+        shareIntent.setType("image/*");
+        PendingIntent pendingShareIntent = PendingIntent.getActivity(MainActivity.this, 1, shareIntent, 0);
+        builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingShareIntent);
+        builder.setContentIntent(pendingIntent);
+        //startActivity(shareIntent);
+
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(0, builder.build());
 
     }
-
 }
 
