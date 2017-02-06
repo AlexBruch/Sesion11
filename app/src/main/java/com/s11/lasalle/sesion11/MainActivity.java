@@ -40,6 +40,8 @@ public class MainActivity extends AppCompatActivity{
     private EditText link;
     private Button download;
     private ImageView image;
+    private Bitmap saveImage;
+    private int REQUEST_CODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +102,26 @@ public class MainActivity extends AppCompatActivity{
         return downloadedbitmap;
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_CODE) {
+            if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                String[] splitLink = link.getText().toString().split("/");
+                String imageName = splitLink[splitLink.length-1];
+                File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), imageName);
+                try {
+                    FileOutputStream fileOutputStream = new FileOutputStream(file);
+                    saveImage.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream);
+                    fileOutputStream.flush(); // Optimizació: per borrar fluxe de bytes de sortida i obligar als que estan en memoria a escriures
+                    fileOutputStream.close();
+                    file.setReadable(true, false); // Per permetre acces de lectura a totes les aplicacions
+                    if (!file.mkdirs()) Log.e("Crear carpeta 3", "No rutlla");
+
+                } catch (Exception e) {Log.e("Guardar imatge 3", "No rutlla");}
+            }
+        }
+    }
+
     private void createNotificationActivity(Bitmap bitmap) {
 
         /** Per agafar nom original de la imatge **/
@@ -131,16 +153,14 @@ public class MainActivity extends AppCompatActivity{
 
         /** GUARDAR IMATGE **/
 
-        Bitmap saveImage = bitmap;
-
+        saveImage = bitmap;
         File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), imageName);
-        //File file = new File(getApplicationContext().getCacheDir()), imageName);
 
         //Comprovem la versió d'Android
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 // Demanem permís a l'usuari
-                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CODE);
             }else {
                 // Si ja està donat
                 try {
@@ -172,14 +192,12 @@ public class MainActivity extends AppCompatActivity{
         shareIntent.putExtra(Intent.EXTRA_TEXT, "Imatge descarregada de " + link.getText().toString());
         shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
         shareIntent.setType("image/png");
-        PendingIntent pendingShareIntent = PendingIntent.getActivity(MainActivity.this, 1, shareIntent, 1);
+        PendingIntent pendingShareIntent = PendingIntent.getActivity(MainActivity.this, 1, shareIntent, 0);
         builder.addAction(android.R.drawable.ic_menu_share, "SHARE", pendingShareIntent);
         builder.setContentIntent(pendingIntent);
-        //startActivity(shareIntent);
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(0, builder.build());
-
     }
 }
 
